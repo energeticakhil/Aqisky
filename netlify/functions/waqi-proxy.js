@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+export default async (req, res) => {
   const token = process.env.WAQI_TOKEN;
   const city = req.query.city;
 
@@ -16,4 +16,4 @@ export default async function handler(req, res) {
   } catch (error) {
     return res.status(500).json({ error: "API failed", detail: error.message });
   }
-}
+};
