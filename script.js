@@ -1,20 +1,42 @@
 async function getAQI() {
-    const city = document.getElementById("cityInput").value;
+    const city = document.getElementById("cityInput").value.trim();
+    const resultBox = document.getElementById("result");
 
-    const response = await fetch(`/.netlify/functions/waqi-proxy?city=${city}`);
-    const data = await response.json();
-
-    if (data.status !== "ok") {
-        document.getElementById("result").innerHTML = `
-            <p>City not found or API error.</p>
-        `;
+    if (!city) {
+        resultBox.innerHTML = "<p>Please enter a city.</p>";
         return;
     }
 
-    let cityName = data.data.city?.name || city;
+    resultBox.innerHTML = "<p>Searching...</p>";
 
-    document.getElementById("result").innerHTML = `
-        <h2>${cityName}</h2>
-        <p>AQI: ${data.data.aqi}</p>
-    `;
+    try {
+        // Step 1: Convert city name to coordinates (Geocoding API)
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${city}&format=json`);
+        const geoData = await geoRes.json();
+
+        if (!geoData || geoData.length === 0) {
+            resultBox.innerHTML = "<p>City not found.</p>";
+            return;
+        }
+
+        const lat = geoData[0].lat;
+        const lon = geoData[0].lon;
+
+        // Step 2: Call your Netlify proxy for WAQI AQI data
+        const aqiRes = await fetch(`/.netlify/functions/waqi-proxy?lat=${lat}&lon=${lon}`);
+        const aqiData = await aqiRes.json();
+
+        if (!aqiData || !aqiData.data || !aqiData.data.aqi) {
+            resultBox.innerHTML = "<p>API error.</p>";
+            return;
+        }
+
+        resultBox.innerHTML = `
+            <h2>${city}</h2>
+            <p>AQI: ${aqiData.data.aqi}</p>
+        `;
+    } catch (err) {
+        console.error(err);
+        resultBox.innerHTML = "<p>Error fetching data.</p>";
+    }
 }
