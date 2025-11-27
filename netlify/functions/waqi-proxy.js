@@ -1,25 +1,19 @@
-// Netlify serverless function for WAQI API proxy
-export async function handler(event) {
-    const API_KEY = "demo"; // Replace with your WAQI key later
+export default async function handler(req, res) {
+  const token = process.env.WAQI_TOKEN;
+  const city = req.query.city;
 
-    const params = event.queryStringParameters;
-    let url = "";
+  if (!city) {
+    return res.status(400).json({ error: "City is required" });
+  }
 
-    if (params.search) {
-        // Search station API
-        url = `https://api.waqi.info/search/?token=${API_KEY}&keyword=${params.search}`;
-    }
+  try {
+    const response = await fetch(
+      `https://api.waqi.info/feed/${city}/?token=${token}`
+    );
 
-    else if (params.city) {
-        // AQI data API
-        url = `https://api.waqi.info/feed/${params.city}/?token=${API_KEY}`;
-    }
-
-    const response = await fetch(url);
-    const waqiData = await response.json();
-
-    return {
-        statusCode: 200,
-        body: JSON.stringify(waqiData.data || {})
-    };
+    const data = await response.json();
+    return res.status(200).json(data);
+  } catch (error) {
+    return res.status(500).json({ error: "API failed", detail: error.message });
+  }
 }
